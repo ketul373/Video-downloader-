@@ -1,0 +1,39 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import yt_dlp
+
+app = Flask(__name__)
+CORS(app)  # એપ સાથે કનેક્ટ થવા માટે
+
+@app.route('/get-video', methods=['POST'])
+def get_video():
+    data = request.json
+    video_url = data.get('url')
+
+    if not video_url:
+        return jsonify({'error': 'URL જરૂરી છે'}), 400
+
+    ydl_opts = {
+        'format': 'best[ext=mp4]/best',  # સૌથી સારી ક્વોલિટીની MP4
+        'quiet': True,
+        'no_warnings': True,
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(video_url, download=False)
+            download_url = info.get('url')
+            title = info.get('title', 'Video')
+            thumbnail = info.get('thumbnail', '')
+
+            return jsonify({
+                'success': True,
+                'title': title,
+                'download_url': download_url,
+                'thumbnail': thumbnail
+            })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
